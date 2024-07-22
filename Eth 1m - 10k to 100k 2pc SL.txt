@@ -1,0 +1,102 @@
+import pandas as pd
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score
+
+# Function to calculate RSI
+def calculate_rsi(data, window):
+    delta = data.diff()
+    gain = (delta.where(delta > 0, 0)).rolling(window=window).mean()
+    loss = (-delta.where(delta < 0, 0)).rolling(window=window).mean()
+    rs = gain / loss
+    rsi = 100 - (100 / (1 + rs))
+    return rsi
+
+# Function to calculate MACD
+def calculate_macd(data, short_window, long_window, signal_window):
+    short_ema = data.ewm(span=short_window, adjust=False).mean()
+    long_ema = data.ewm(span=long_window, adjust=False).mean()
+    macd = short_ema - long_ema
+    signal_line = macd.ewm(span=signal_window, adjust=False).mean()
+    return macd, signal_line
+
+# Load your data
+df = pd.read_csv('binance_1m_ETHUSDT_30days.csv', parse_dates=True, index_col='timestamp')
+
+# Calculate RSI and MACD
+df['rsi'] = calculate_rsi(df['close'], 14)
+macd, signal = calculate_macd(df['close'], 12, 26, 9)
+df['macd'] = macd
+df['signal'] = signal
+df['macd_diff'] = macd - signal
+df['long_term_ma'] = df['close'].rolling(window=50).mean()
+
+# Drop NaN values
+df = df.dropna()
+
+# Prepare features and labels
+features_to_use = ['rsi', 'macd_diff', 'long_term_ma']
+X = df[features_to_use]
+y = (df['close'].diff() > 0).astype(int)
+
+# Split the data
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, shuffle=False)
+
+# Initialize and train the model
+model = RandomForestClassifier(n_estimators=100)
+model.fit(X_train, y_train)
+
+# Model evaluation
+y_pred = model.predict(X_test)
+accuracy = accuracy_score(y_test, y_pred)
+print(f"Model Accuracy: {accuracy}")
+
+# Initialize trading variables
+capital = 10000
+current_capital = capital * 10  # 10x leverage
+position = 0
+stop_loss = None
+take_profit = None
+
+# Initialize counters
+stop_loss_hit = 0
+take_profit_dipped = 0
+
+# Trading logic
+for i, row in df.iterrows():
+    current_price = row['close']
+    long_term_ma = row['long_term_ma']
+    features = df.loc[[i]][features_to_use]
+    prediction = model.predict(features)[0]
+
+    if prediction == 1 and position == 0 and current_capital >= current_price and current_price > long_term_ma:
+        position = current_price
+        current_capital -= current_price * 10
+        stop_loss = current_price * 0.98
+        take_profit = current_price * 1.05
+
+    elif position > 0:
+        if current_price <= stop_loss:
+            current_capital += current_price * 10
+            position = 0
+            stop_loss_hit += 1
+            stop_loss = None
+            take_profit = None
+
+        elif current_price >= take_profit:
+            if current_price < position * 0.975:
+                take_profit_dipped += 1
+            current_capital += current_price * 10
+            position = 0
+            stop_loss = None
+            take_profit = None
+
+        elif prediction == 0:
+            current_capital += current_price * 10
+            position = 0
+            stop_loss = None
+            take_profit = None
+
+print(f"Final Capital: {current_capital}")
+print(f"Stop Loss Hit: {stop_loss_hit} times")
+print(f"Take Profit Dipped Below 0.975 of Initial Price: {take_profit_dipped} times")

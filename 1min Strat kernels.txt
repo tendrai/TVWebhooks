@@ -1,0 +1,61 @@
+//@version=5
+indicator("0.25 Range V2.2 signals", shorttitle="0.25 Range V2.2 signals", overlay=true)
+
+import jdehorty/KernelFunctions/2 as kernels
+
+// Inputs for Custom Fibonacci Scalp Signals
+lookback = input.int(100, minval=1, title="Lookback Period for High/Low")
+highPrice = ta.highest(high, lookback)
+lowPrice = ta.lowest(low, lookback)
+
+// Calculate the custom Fibonacci levels
+fib25 = lowPrice + (highPrice - lowPrice) * 0.25
+fib50 = lowPrice + (highPrice - lowPrice) * 0.50
+fib75 = lowPrice + (highPrice - lowPrice) * 0.75
+
+// Inputs for Rational Quadratic Kernel Regression
+source = input(close, title="Source")
+h = input.int(8, title='Lookback Window', minval=3, maxval=50, tooltip='The number of bars used for the estimation.')
+r = input.float(8.0, title='Relative Weighting', step=0.25, minval=0.25, maxval=25, tooltip='Relative weighting of time frames.')
+x = input.int(25, title="Regression Level", minval=2, maxval=25, tooltip='Controls how tightly fit the kernel estimate is to the data.')
+lag = input.int(2, title="Lag", minval=1, maxval=2, tooltip="Lag for crossover detection.")
+
+// Calculate the Rational Quadratic Kernel Regression
+kernelEstimate = kernels.rationalQuadratic(source, h, r, x)
+
+// Generate long and short signals based on Fibonacci levels and Kernel Regression
+longSignal = ta.crossover(close, fib25) and close[1] < fib25 and close > kernelEstimate
+shortSignal = ta.crossunder(close, fib75) and close[1] > fib75 and close < kernelEstimate
+
+// Plot the signals on the chart with larger triangles only if they are above/below the Kernel Regression line
+plotshape(series=longSignal, title="Long Signal", location=location.belowbar, color=color.green, style=shape.triangleup, size=size.large)
+plotshape(series=shortSignal, title="Short Signal", location=location.abovebar, color=color.red, style=shape.triangledown, size=size.large)
+
+// Define dynamic stop loss level based on previous candle for longs and shorts
+var float stopLoss = na
+
+if (longSignal)
+    stopLoss := low[1]
+else if (shortSignal)
+    stopLoss := high[1]
+
+// Plot unified stop loss level
+plot(not na(stopLoss) ? stopLoss : na, color=color.orange, title="Stop Loss", style=plot.style_line, linewidth=1)
+
+// Calculate the 0.50% mark from the signal candle
+var float markPrice = na
+
+if (longSignal)
+    markPrice := close * 1.005
+else if (shortSignal)
+    markPrice := close * 0.995
+
+// Retain the mark price until a new signal appears
+markPrice := longSignal ? close * 1.005 : (shortSignal ? close * 0.995 : markPrice)
+
+// Plot the Take Profit line
+plot(not na(markPrice) ? markPrice : na, title="Take Profit Line", color=color.purple, style=plot.style_line, linewidth=2)
+
+// Alert conditions
+alertcondition(longSignal, title="Long Entry Alert", message="Potential long entry at 0.25 Fib Level")
+alertcondition(shortSignal, title="Short Entry Alert", message="Potential short entry at 0.75 Fib Level")
