@@ -1,5 +1,6 @@
-import os
+import asyncio
 from flask import Flask, request, jsonify
+import os
 from binance.client import Client
 from binance.enums import *
 
