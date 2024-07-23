@@ -7,15 +7,13 @@ from binance.enums import *
 app = Flask(__name__)
 
 # Configure Binance API
-binance_api_key = os.environ.get('yOWkYTnsMYKEZcQW5tI6D7oqdHwystJ2hSuyrPWPHdER4bafK9a0OWbfDg4eko66')
-binance_api_secret = os.environ.get('Kj0KQ8bixe4rmaC2ZWYxd9yd8a7AWMPEKJtf73Ltof9TqtPLNlniz6WwuhCR7Bok')
+binance_api_key = os.environ.get('BINANCE_API_KEY')
+binance_api_secret = os.environ.get('BINANCE_API_SECRET')
 client = Client(binance_api_key, binance_api_secret)
-
 
 @app.route('/')
 def index():
     return "Hello, this is the home page!"
-
 
 @app.route('/webhook', methods=['POST'])
 async def webhook():
@@ -50,6 +48,7 @@ async def webhook():
             break
 
     # Perform actions based on the current position and desired action
+    order = None  # Initialize order variable
     if action == 'buy':
         if current_position_size < 0:
             # Close current short position
@@ -63,4 +62,27 @@ async def webhook():
         print(f"Opening long position of size: {order_size}")
         order = await asyncio.to_thread(client.futures_create_order,
                                         symbol=ticker,
-                                        side=SI
+                                        side=SIDE_BUY,
+                                        type=ORDER_TYPE_MARKET,
+                                        quantity=order_size)
+    elif action == 'sell':
+        if current_position_size > 0:
+            # Close current long position
+            print(f"Closing long position of size: {abs(current_position_size)}")
+            await asyncio.to_thread(client.futures_create_order,
+                                    symbol=ticker,
+                                    side=SIDE_SELL,
+                                    type=ORDER_TYPE_MARKET,
+                                    quantity=abs(current_position_size))
+        # Open short position
+        print(f"Opening short position of size: {order_size}")
+        order = await asyncio.to_thread(client.futures_create_order,
+                                        symbol=ticker,
+                                        side=SIDE_SELL,
+                                        type=ORDER_TYPE_MARKET,
+                                        quantity=order_size)
+
+    return jsonify(order)
+
+if __name__ == '__main__':
+    app.run(debug=True)
