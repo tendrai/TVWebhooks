@@ -47,6 +47,7 @@ async def webhook():
             print(f"Current position size for {ticker}: {current_position_size}")
             break
 
+    order = None
     # Perform actions based on the current position and desired action
     if action == 'buy':
         if current_position_size < 0:
