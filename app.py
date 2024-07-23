@@ -22,9 +22,9 @@ async def webhook():
 
     # Extract details from the webhook payload
     action = data.get('action')
-    ticker = data.get('ticker', 'ONEUSDT') + "T"
-    leverage = int(data.get('leverage', 10))
-    funds_percentage = float(data.get('funds_percentage', 10))
+    ticker = data.get('ticker', 'ONEUSDT') + ".P"
+    leverage = data.get('leverage', 10)
+    funds_percentage = data.get('funds_percentage', 10)
 
     # Set leverage
     await asyncio.to_thread(client.futures_change_leverage, symbol=ticker, leverage=leverage)
@@ -57,7 +57,6 @@ async def webhook():
                                     side=SIDE_BUY,
                                     type=ORDER_TYPE_MARKET,
                                     quantity=abs(current_position_size))
-
         # Open long position
         print(f"Opening long position of size: {order_size}")
         order = await asyncio.to_thread(client.futures_create_order,
@@ -65,8 +64,6 @@ async def webhook():
                                         side=SIDE_BUY,
                                         type=ORDER_TYPE_MARKET,
                                         quantity=order_size)
-        return jsonify(order)
-
     elif action == 'sell':
         if current_position_size > 0:
             # Close current long position
@@ -76,7 +73,6 @@ async def webhook():
                                     side=SIDE_SELL,
                                     type=ORDER_TYPE_MARKET,
                                     quantity=abs(current_position_size))
-
         # Open short position
         print(f"Opening short position of size: {order_size}")
         order = await asyncio.to_thread(client.futures_create_order,
@@ -84,9 +80,8 @@ async def webhook():
                                         side=SIDE_SELL,
                                         type=ORDER_TYPE_MARKET,
                                         quantity=order_size)
-        return jsonify(order)
 
-    return jsonify({"status": "invalid action"})
+    return jsonify(order)
 
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=8080)
+    app.run(debug=True)
