@@ -59,8 +59,15 @@ async def webhook():
                                     side=SIDE_BUY,
                                     type=ORDER_TYPE_MARKET,
                                     quantity=abs(current_position_size))
-        # Open long position
-        print(f"Opening long position of size: {order_size}")
-        order = await asyncio.to_thread(client.futures_create_order,
-                                        symbol=ticker,
-                                        side=SI
+            # Open short position
+            print(f"Opening short position of size: {order_size}")
+            order = await asyncio.to_thread(client.futures_create_order,
+                                            symbol=ticker,
+                                            side=SIDE_SELL,
+                                            type=ORDER_TYPE_MARKET,
+                                            quantity=order_size)
+
+        return jsonify(order)
+
+    if __name__ == '__main__':
+        app.run(debug=True)
