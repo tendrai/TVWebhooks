@@ -1,14 +1,13 @@
-import asyncio
-from flask import Flask, request, jsonify
 import os
+from flask import Flask, request, jsonify
 from binance.client import Client
 from binance.enums import *
 
 app = Flask(__name__)
 
 # Configure Binance API
-binance_api_key = os.environ.get('yOWkYTnsMYKEZcQW5tI6D7oqdHwystJ2hSuyrPWPHdER4bafK9a0OWbfDg4eko66')
-binance_api_secret = os.environ.get('Kj0KQ8bixe4rmaC2ZWYxd9yd8a7AWMPEKJtf73Ltof9TqtPLNlniz6WwuhCR7Bok')
+binance_api_key = os.environ.get('BINANCE_API_KEY')
+binance_api_secret = os.environ.get('BINANCE_API_SECRET')
 client = Client(binance_api_key, binance_api_secret)
 
 @app.route('/')
@@ -47,7 +46,6 @@ async def webhook():
             print(f"Current position size for {ticker}: {current_position_size}")
             break
 
-    order = None
     # Perform actions based on the current position and desired action
     if action == 'buy':
         if current_position_size < 0:
