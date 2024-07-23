@@ -11,9 +11,11 @@ binance_api_key = os.environ.get('BINANCE_API_KEY')
 binance_api_secret = os.environ.get('BINANCE_API_SECRET')
 client = Client(binance_api_key, binance_api_secret)
 
+
 @app.route('/')
 def index():
     return "Hello, this is the home page!"
+
 
 @app.route('/webhook', methods=['POST'])
 async def webhook():
@@ -46,6 +48,8 @@ async def webhook():
             current_position_size = float(position['positionAmt'])
             print(f"Current position size for {ticker}: {current_position_size}")
             break
+
+    order = {}
 
     # Perform actions based on the current position and desired action
     if action == 'buy':
@@ -82,6 +86,7 @@ async def webhook():
                                         quantity=order_size)
 
     return jsonify(order)
+
 
 if __name__ == '__main__':
     app.run(debug=True)
